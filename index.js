@@ -1,30 +1,9 @@
+import conectarDB from './src/config/db.js'
 import { ApolloServer, gql, UserInputError } from "apollo-server"
 import { v4 as uuid } from 'uuid';
-import axios from 'axios'
+import Person from './src/models/Person.js'
 
-const people = [
-    {
-        id: "757121-1234-1481-12399123",
-        name: "Carlos",
-        phone: "34-612918234",
-        city: "Logronio",
-        street: "Calle Estambrera"
-    },
-    {
-        id: "757121-1234-1481-1234124",
-        name: "Pedro",
-        city: "Logronio",
-        street: "Avda. La Paz"
-    },
-    {
-        id: "757121-1234-1481-7652176",
-        name: "Javier",
-        phone: "34-654827654",
-        city: "Madrid",
-        street: "Gran via"
-    }
-  ]
-
+conectarDB()
 
 const typeDefinitions = gql`
   enum YesNo {
@@ -66,32 +45,23 @@ const typeDefinitions = gql`
 
 const resolvers = {
   Query: {
-    personCount: () => people.length,
+    personCount: async () => await Person.collection.countDocuments(),
     allPersons: async (root, args) => {
-      const { data: peopleFromRestApi } = await axios.get('http://localhost:3000/people')
-      if (!args.phone) return people
-      return peopleFromRestApi.filter(person => args.phone === "YES" ? person.phone : !person.phone)
+      return await Person.find({})
     },
-    findPerson: (root, {name}) => {
-      return people.find(person => person.name === name)
+    findPerson: async (root, {name}) => {
+      return await Person.findOne({ name })
     }
   },
   Mutation: {
-    addPerson: (root, args) => {
-      if (people.find(p => p.name === args.name)) {
-        throw new UserInputError('Name must be unique', { invalidArgs: args.name })
-      }
-      const person = {...args, id: uuid()}
-      people.push(person)
-      return person
+    addPerson: async (root, args) => {
+      const person = new Person({ ...args })
+      return await Person.save()
     },
-    editNumber: (root, args) => {
-      const personIndex = people.findIndex(p => p.name === args.name)
-      if (personIndex === -1) return null
-      const person = people[personIndex]
-      const updatedPerson = { ...person, phone: args.phone }
-      people[personIndex] = updatedPerson
-      return updatedPerson
+    editNumber: async (root, args) => {
+      const person = await findOne({ name: args.name })
+      person.phone = args.phone
+      return person.save()
     }
   },
   Person: {
