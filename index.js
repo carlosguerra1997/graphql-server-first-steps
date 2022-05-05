@@ -47,7 +47,8 @@ const resolvers = {
   Query: {
     personCount: async () => await Person.collection.countDocuments(),
     allPersons: async (root, args) => {
-      return await Person.find({})
+      if (!args.phone) return await Person.find({})
+      else return await Person.find({ phone: { $exists: args.phone === 'YES' } })
     },
     findPerson: async (root, {name}) => {
       return await Person.findOne({ name })
@@ -56,12 +57,23 @@ const resolvers = {
   Mutation: {
     addPerson: async (root, args) => {
       const person = new Person({ ...args })
-      return await Person.save()
+      try {
+        await person.save()
+      } catch (error) {
+        throw new UserInputError(error.message, { invalidArgs: args })
+      }
+      return person
     },
     editNumber: async (root, args) => {
-      const person = await findOne({ name: args.name })
+      const person = await Person.findOne({ name: args.name })
+      if (!person) return
       person.phone = args.phone
-      return person.save()
+      try {
+        await person.save()
+      } catch (error) {
+        throw new UserInputError(error.message, { invalidArgs: args })
+      }
+      return person
     }
   },
   Person: {
