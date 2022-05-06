@@ -14,7 +14,7 @@ const schema = new mongoose.Schema({
   },
   friends: [
     {
-      ref: 'person',
+      ref: 'Person',
       type: mongoose.Schema.Types.ObjectId
     }
   ]
